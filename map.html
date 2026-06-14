@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Peta Evakuasi — Kota Padang</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-panel  : rgba(10, 14, 20, 0.88);
+      --bg-card   : rgba(255, 255, 255, 0.04);
+      --border    : rgba(255, 255, 255, 0.07);
+      --cyan      : #34d1a0;
+      --cyan-dim  : rgba(52, 209, 160, 0.1);
+      --red       : #f06050;
+      --orange    : #e8963a;
+      --text-main : #e0e6ed;
+      --text-muted: #5a6878;
+    }
+
+    body.light-theme {
+      --bg-panel  : rgba(255, 255, 255, 0.92);
+      --bg-card   : rgba(0, 0, 0, 0.025);
+      --border    : rgba(0, 0, 0, 0.08);
+      --cyan      : #1a9a6f;
+      --cyan-dim  : rgba(26, 154, 111, 0.08);
+      --red       : #c94040;
+      --orange    : #c47a20;
+      --text-main : #1a1f26;
+      --text-muted: #8895a7;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #080b10;
+      color: var(--text-main);
+      overflow: hidden;
+      transition: background 0.25s, color 0.25s;
+      -webkit-font-smoothing: antialiased;
+    }
+    body.light-theme { background: #f0f2f5; }
+
+    #map { height: 100vh; width: 100%; }
+
+    /* ── PANEL ─────────────────────────────── */
+    #panel {
+      position: absolute;
+      top: 14px; left: 14px;
+      z-index: 1000;
+      width: 248px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 28px rgba(0,0,0,0.22);
+      transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+    body.light-theme #panel {
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 28px rgba(0,0,0,0.08);
+    }
+
+    /* ── Top bar ── */
+    #top-control-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .back-btn {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      display: flex; align-items: center; gap: 4px;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: var(--cyan); }
+    .back-btn svg {
+      width: 12px; height: 12px;
+      stroke: currentColor; stroke-width: 2; fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .theme-toggle-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .theme-toggle-btn:hover { border-color: var(--cyan); color: var(--text-main); }
+    .theme-toggle-btn svg {
+      width: 12px; height: 12px;
+      stroke: currentColor; stroke-width: 2; fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    /* ── Panel header ── */
+    #panel-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .logo-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--red);
+      flex-shrink: 0;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .logo-dot.active { background: var(--cyan); }
+    .logo-dot.errord { background: var(--red); animation: none; }
+
+    @keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity:.35 } }
+
+    #panel-header h1 {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.15px;
+    }
+    #panel-header span {
+      font-size: 10px; color: var(--text-muted);
+      display: block; margin-top: 1px;
+    }
+
+    /* ── Panel body ── */
+    #panel-body {
+      padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* ── Mode toggle ── */
+    #mode-toggle {
+      display: flex;
+      background: var(--bg-card);
+      border-radius: 7px;
+      padding: 2px;
+      border: 1px solid var(--border);
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 5px 0;
+      font-size: 11px; font-weight: 500;
+      border-radius: 5px; border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      font-family: inherit;
+    }
+    .mode-btn.active {
+      background: var(--cyan-dim);
+      color: var(--cyan);
+      font-weight: 600;
+    }
+    .mode-btn:not(.active):hover { color: var(--text-main); }
+
+    /* ── Status badge ── */
+    #status-badge {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      line-height: 1.3;
+    }
+    #status-badge .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+    #status-badge.loading .dot   { background: var(--orange); animation: pulse 1s ease-in-out infinite; }
+    #status-badge.loading        { color: var(--orange); border-color: rgba(232,150,58,.18); }
+    #status-badge.success .dot   { background: var(--cyan); animation: none; }
+    #status-badge.success        { color: var(--cyan); border-color: rgba(52,209,160,.18); background: var(--cyan-dim); }
+    #status-badge.error .dot     { background: var(--red); animation: none; }
+    #status-badge.error          { color: var(--red); border-color: rgba(240,96,80,.18); }
+    #status-badge.fallback .dot  { background: var(--orange); animation: none; }
+    #status-badge.fallback       { color: var(--orange); border-color: rgba(232,150,58,.18); }
+
+    /* ── Shelter card ── */
+    .info-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 10px;
+      display: none;
+    }
+    .info-card.visible { display: block; }
+    .card-label {
+      font-size: 9px; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--text-muted);
+      margin-bottom: 3px; font-weight: 500;
+    }
+    .card-value { font-size: 12px; font-weight: 600; line-height: 1.3; }
+    .card-sub   { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+    /* ── Stats grid ── */
+    #stats-grid {
+      display: none;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+    #stats-grid.visible { display: grid; }
+    .stat-box {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 4px;
+      text-align: center;
+    }
+    .stat-box .sv {
+      font-size: 14px; font-weight: 700;
+      color: var(--cyan); line-height: 1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.3px;
+    }
+    .stat-box .sl {
+      font-size: 8px; color: var(--text-muted);
+      margin-top: 3px; text-transform: uppercase;
+      letter-spacing: 0.6px; font-weight: 500;
+    }
+
+    /* ── Click hint ── */
+    #click-hint {
+      display: none;
+      padding: 7px 10px;
+      background: var(--cyan-dim);
+      border: 1px dashed rgba(52,209,160,.2);
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--cyan);
+      text-align: center;
+      line-height: 1.4;
+    }
+    #click-hint.visible { display: block; }
+
+    /* ── Action btn ── */
+    .action-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 7px 10px;
+      font-size: 11px; font-weight: 500;
+      font-family: inherit;
+      cursor: pointer; width: 100%;
+      transition: all 0.2s;
+      letter-spacing: 0.15px;
+    }
+    .action-btn:hover {
+      background: var(--cyan-dim);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+    .action-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+    /* ── Fallback notif ── */
+    #fallback-notif {
+      display: none;
+      position: absolute;
+      bottom: 16px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      background: rgba(232,150,58,.08);
+      border: 1px solid rgba(232,150,58,.2);
+      color: var(--orange);
+      font-size: 11px; font-weight: 500;
+      padding: 6px 16px;
+      border-radius: 100px;
+      backdrop-filter: blur(12px);
+      white-space: nowrap;
+    }
+
+    /* ── Leaflet overrides ────────────────── */
+    .leaflet-popup-content-wrapper {
+      background: var(--bg-panel) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 10px !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25) !important;
+      backdrop-filter: blur(12px) !important;
+      font-family: 'Inter', sans-serif !important;
+    }
+    .leaflet-popup-tip { background: var(--bg-panel) !important; }
+    .popup-title {
+      font-size: 12px; font-weight: 600; color: var(--cyan); margin-bottom: 3px;
+    }
+    .popup-sub {
+      font-size: 10.5px; color: var(--text-muted); line-height: 1.5;
+    }
+
+    .leaflet-control-zoom a {
+      background: var(--bg-panel) !important;
+      color: var(--text-muted) !important;
+      border-color: var(--border) !important;
+      font-weight: 400 !important;
+      transition: color 0.2s !important;
+    }
+    .leaflet-control-zoom a:hover { color: var(--text-main) !important; }
+    .leaflet-control-attribution {
+      background: transparent !important;
+      color: rgba(128,128,128,0.35) !important;
+      font-size: 9px !important;
+    }
+
+    body.light-theme .leaflet-popup-content-wrapper {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+    }
+    body.light-theme .popup-sub { color: var(--text-muted); }
+    body.light-theme .leaflet-control-attribution {
+      color: rgba(0,0,0,0.25) !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="panel">
+    <div id="top-control-bar">
+      <a href="index.html" class="back-btn">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+        Kembali
+      </a>
+      <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleTheme()" title="Ganti Tema">
+        <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+      </button>
+    </div>
+
+    <div id="panel-header">
+      <div class="logo-dot" id="header-dot"></div>
+      <div>
+        <h1>Evakuasi Tsunami</h1>
+        <span>Kota Padang</span>
+      </div>
+    </div>
+
+    <div id="panel-body">
+      <div id="mode-toggle">
+        <div class="mode-btn active" id="btn-mode-gps"  onclick="setMode('gps')">GPS</div>
+        <div class="mode-btn"        id="btn-mode-klik" onclick="setMode('klik')">Manual</div>
+      </div>
+
+      <div id="status-badge" class="loading">
+        <div class="dot"></div>
+        <span id="status-text">Memuat peta...</span>
+      </div>
+
+      <div id="click-hint">
+        Klik titik di peta sebagai posisi simulasi
+      </div>
+
+      <div class="info-card" id="card-shelter">
+        <div class="card-label">Shelter Terdekat</div>
+        <div class="card-value" id="shelter-nama">—</div>
+        <div class="card-sub"   id="shelter-jarak">—</div>
+      </div>
+
+      <div id="stats-grid">
+        <div class="stat-box"><div class="sv" id="stat-km">—</div><div class="sl">Jarak</div></div>
+        <div class="stat-box"><div class="sv" id="stat-menit">—</div><div class="sl">Waktu</div></div>
+        <div class="stat-box"><div class="sv" id="stat-seg">—</div><div class="sl">Seg</div></div>
+      </div>
+
+      <button class="action-btn" id="btn-reload" onclick="onReload()">Lacak Ulang</button>
+    </div>
+  </div>
+
+  <div id="fallback-notif">Rute jalan tidak tersedia — menampilkan garis lurus estimasi</div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ── KONSTANTA ─────────────────────────────────────────
+    const BACKEND = 'https://harlee-bidirectional-unvaguely.ngrok-free.dev';
+
+    // ── STATE ─────────────────────────────────────────────
+    let mode = 'gps';
+    let userMarker = null, shelterMarker = null, routeLayer = null, accuracyCircle = null;
+    let currentTheme = localStorage.getItem('theme') || 'dark';
+    let tileLayer = null;
+
+    // ── MAP ───────────────────────────────────────────────
+    const map = L.map('map', { zoomControl: true }).setView([-0.9471, 100.4172], 13);
+    
+    // Inisialisasi basemap awal berdasarkan tema aktif
+    applyTheme(currentTheme);
+
+    // Fungsi untuk mengubah tema
+    function applyTheme(theme) {
+      currentTheme = theme;
+      if (tileLayer) map.removeLayer(tileLayer);
+      
+      const themeToggleBtn = document.getElementById('theme-toggle');
+
+      if (theme === 'light') {
+        document.body.classList.add('light-theme');
+        if (themeToggleBtn) themeToggleBtn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+        tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+        }).addTo(map);
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.body.classList.remove('light-theme');
+        if (themeToggleBtn) themeToggleBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>';
+        tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+        }).addTo(map);
+        localStorage.setItem('theme', 'dark');
+      }
+
+      // Refresh gambar polyline jika rute sedang aktif agar kontras warna terupdate
+      if (routeLayer && lastRouteData) {
+        redrawRoute(lastRouteData);
+      }
+    }
+
+    function toggleTheme() {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    }
+
+    // Variabel penyimpan data rute terakhir untuk keperluan refresh warna rute saat ganti tema
+    let lastRouteData = null;
+    let lastUserCoords = null;
+
+    // ── ICONS ─────────────────────────────────────────────
+    const iconUser = L.divIcon({
+      html: `<div style="width:14px;height:14px;background:#00ffcc;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(0,255,204,.25),0 0 12px rgba(0,255,204,.6)"></div>`,
+      className: '', iconSize: [14,14], iconAnchor: [7,7]
+    });
+    const iconShelter = L.divIcon({
+      html: `<div style="width:16px;height:16px;background:#ff4d4d;border:2px solid #fff;border-radius:3px;transform:rotate(45deg);box-shadow:0 0 0 3px rgba(255,77,77,.25),0 0 14px rgba(255,77,77,.7)"></div>`,
+      className: '', iconSize: [16,16], iconAnchor: [8,8]
+    });
+
+    // ── HELPERS UI ────────────────────────────────────────
+    function setStatus(tipe, teks) {
+      const b = document.getElementById('status-badge');
+      const d = document.getElementById('header-dot');
+      b.className = tipe;
+      b.querySelector('span').textContent = teks;
+      d.className = 'logo-dot';
+      if (tipe === 'success') d.classList.add('active');
+      if (tipe === 'error')   d.classList.add('errord');
+    }
+
+    function clearLayers() {
+      [userMarker, shelterMarker, routeLayer, accuracyCircle].forEach(l => { if (l) map.removeLayer(l); });
+      userMarker = shelterMarker = routeLayer = accuracyCircle = null;
+    }
+
+    function clearUI() {
+      document.getElementById('card-shelter').classList.remove('visible');
+      document.getElementById('stats-grid').classList.remove('visible');
+      document.getElementById('fallback-notif').style.display = 'none';
+      lastRouteData = null;
+      lastUserCoords = null;
+    }
+
+    function tampilkanInfo(data, akurasiM) {
+      const { shelter, statistik, status_rute } = data;
+
+      document.getElementById('card-shelter').classList.add('visible');
+      document.getElementById('shelter-nama').textContent  = shelter.nama || 'Shelter Evakuasi';
+      document.getElementById('shelter-jarak').textContent =
+        `${Number(shelter.jarak_lurus_meter).toLocaleString('id-ID')} m (jarak lurus)`;
+
+      document.getElementById('stats-grid').classList.add('visible');
+      document.getElementById('stat-km').textContent =
+        statistik.total_jarak_meter >= 1000
+          ? `${statistik.total_jarak_km.replace('.', ',')} km`
+          : `${Math.round(statistik.total_jarak_meter)} m`;
+      document.getElementById('stat-menit').textContent = `${statistik.estimasi_jalan_kaki_menit} mnt`;
+      document.getElementById('stat-seg').textContent   = statistik.total_segment;
+
+      document.getElementById('fallback-notif').style.display =
+        status_rute === 'fallback' ? 'block' : 'none';
+    }
+
+    // ── KUNCI FIX: Konversi GeoJSON features → LatLng[] ──
+    // Menghindari error Invalid LatLng dan garis terputus
+    function geojsonKeLatLng(features) {
+      const latLngs = [];
+
+      features.forEach(feature => {
+        const geom = feature.geometry;
+        if (!geom) return;
+
+        let segmenKoordinat = [];
+
+        if (geom.type === 'LineString') {
+          segmenKoordinat = geom.coordinates;
+        } else if (geom.type === 'MultiLineString') {
+          // Gabungkan semua sub-line
+          geom.coordinates.forEach(line => {
+            segmenKoordinat.push(...line);
+          });
+        }
+
+        segmenKoordinat.forEach(c => {
+          // Validasi: harus array [lon, lat] dengan nilai numerik wajar
+          if (
+            Array.isArray(c) &&
+            c.length >= 2 &&
+            typeof c[0] === 'number' &&
+            typeof c[1] === 'number' &&
+            !isNaN(c[0]) && !isNaN(c[1]) &&
+            c[0] >= -180 && c[0] <= 180 &&  // lon valid
+            c[1] >= -90  && c[1] <= 90       // lat valid
+          ) {
+            // GeoJSON: [lon, lat] → Leaflet: [lat, lon]
+            latLngs.push([c[1], c[0]]);
+          }
+        });
+      });
+
+      return latLngs;
+    }
+
+    // Menggambar ulang polyline rute dengan penyesuaian kontras warna berdasarkan tema
+    function redrawRoute(data) {
+      if (routeLayer) map.removeLayer(routeLayer);
+
+      const features = data.rute?.features;
+      const semuaLatLng = geojsonKeLatLng(features);
+
+      if (semuaLatLng.length < 2) return;
+
+      const isFallback = data.status_rute === 'fallback';
+
+      // Memilih warna rute agar kontras tinggi sesuai tema aktif
+      const routeColor = isFallback
+        ? (currentTheme === 'light' ? '#e65100' : '#ffa040') // Orange kontras
+        : (currentTheme === 'light' ? '#009977' : '#00ffcc'); // Cyan/Teal kontras
+
+      routeLayer = L.polyline(semuaLatLng, {
+        color    : routeColor,
+        weight   : isFallback ? 3 : 5,
+        opacity  : 0.92,
+        dashArray: isFallback ? '8 6' : null,
+        lineJoin : 'round',
+        lineCap  : 'round'
+      }).addTo(map);
+    }
+
+    // ── FETCH RUTE ────────────────────────────────────────
+    async function fetchRute(lat, lon, akurasiM) {
+      document.getElementById('btn-reload').disabled = true;
+      setStatus('loading', 'Menghitung rute tercepat...');
+
+      try {
+        const r = await fetch(`${BACKEND}/api/rute-otomatis?lat=${lat}&lon=${lon}`, {
+  headers: { 'ngrok-skip-browser-warning': 'true' }
+});
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+
+        document.getElementById('btn-reload').disabled = false;
+
+        if (!data.success) {
+          setStatus('error', data.message || 'Rute gagal dihitung.');
+          return;
+        }
+
+        const features = data.rute?.features;
+        if (!features || features.length === 0) {
+          setStatus('error', 'Tidak ada data rute dari server.');
+          return;
+        }
+
+        // Simpan data ke state agar bisa digambar ulang saat ubah tema
+        lastRouteData = data;
+        lastUserCoords = { lat, lon, akurasi: akurasiM };
+
+        // ── Marker shelter
+        shelterMarker = L.marker([data.shelter.lat, data.shelter.lon], { icon: iconShelter })
+          .addTo(map)
+          .bindPopup(`
+            <div class="popup-title">🏢 ${data.shelter.nama}</div>
+            <div class="popup-sub">
+              Shelter Evakuasi Tsunami<br>
+              Jarak rute: ${data.statistik.total_jarak_km.replace('.', ',')} km<br>
+              Est. waktu: ${data.statistik.estimasi_jalan_kaki_menit} menit berjalan kaki
+            </div>`)
+          .openPopup();
+
+        // ── Gambar rute ke peta
+        redrawRoute(data);
+
+        // ── Fit bounds mencakup semua elemen
+        const bounds = routeLayer.getBounds()
+          .extend([lat, lon])
+          .extend([data.shelter.lat, data.shelter.lon]);
+        map.fitBounds(bounds.pad(0.15));
+
+        tampilkanInfo(data, akurasiM);
+        setStatus(
+          data.status_rute === 'fallback' ? 'fallback' : 'success',
+          data.status_rute === 'fallback'
+            ? 'Estimasi garis lurus (rute jalan tidak tersedia)'
+            : 'Jalur evakuasi ditemukan!'
+        );
+
+      } catch (err) {
+        console.error('❌ Fetch error:', err);
+        setStatus('error', 'Server tidak merespons. Pastikan backend berjalan di port 3000.');
+        document.getElementById('btn-reload').disabled = false;
+      }
+    }
+
+    // ── MODE GPS ──────────────────────────────────────────
+    function jalankanGPS() {
+      clearLayers(); clearUI();
+      document.getElementById('click-hint').classList.remove('visible');
+      document.getElementById('btn-reload').disabled = true;
+      setStatus('loading', 'Mencari koordinat GPS...');
+
+      if (!navigator.geolocation) {
+        setStatus('error', 'Browser tidak mendukung Geolocation. Gunakan mode Klik Manual.');
+        document.getElementById('btn-reload').disabled = false;
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const acc = pos.coords.accuracy;
+
+          console.log(`📍 GPS: lat=${lat}, lon=${lon}, akurasi=±${Math.round(acc)}m`);
+
+          // Penyesuaian warna marker agar serasi dengan tema
+          const pulseColor = currentTheme === 'light' ? 'rgba(0,153,119,.25)' : 'rgba(0,255,204,.25)';
+          const glowColor = currentTheme === 'light' ? 'rgba(0,153,119,.6)' : 'rgba(0,255,204,.6)';
+          const mainColor = currentTheme === 'light' ? '#009977' : '#00ffcc';
+
+          const currentIconUser = L.divIcon({
+            html: `<div style="width:14px;height:14px;background:${mainColor};border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 4px ${pulseColor},0 0 12px ${glowColor}"></div>`,
+            className: '', iconSize: [14,14], iconAnchor: [7,7]
+          });
+
+          userMarker = L.marker([lat, lon], { icon: currentIconUser }).addTo(map)
+            .bindPopup(`
+              <div class="popup-title">📍 Lokasi Anda</div>
+              <div class="popup-sub">
+                ${lat.toFixed(6)}, ${lon.toFixed(6)}<br>
+                Akurasi: ±${Math.round(acc)}m
+              </div>`);
+
+          accuracyCircle = L.circle([lat, lon], {
+            radius: acc, 
+            color: mainColor, 
+            fillColor: mainColor,
+            fillOpacity: .04, weight: 1, dashArray: '4 4'
+          }).addTo(map);
+
+          map.setView([lat, lon], 15);
+          fetchRute(lat, lon, acc);
+        },
+        (err) => {
+          const msg = {
+            1: 'Izin GPS ditolak. Gunakan mode Klik Manual.',
+            2: 'Sinyal GPS tidak tersedia.',
+            3: 'GPS timeout. Coba lagi atau gunakan Klik Manual.'
+          }[err.code] || 'GPS gagal.';
+          setStatus('error', msg);
+          document.getElementById('btn-reload').disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      );
+    }
+
+    // ── MODE KLIK ─────────────────────────────────────────
+    function aktifkanModeKlik() {
+      clearLayers(); clearUI();
+      document.getElementById('click-hint').classList.add('visible');
+      setStatus('loading', 'Klik titik di peta untuk mulai...');
+      document.getElementById('btn-reload').disabled = false;
+    }
+
+    map.on('click', function(e) {
+      if (mode !== 'klik') return;
+
+      const lat = e.latlng.lat;
+      const lon = e.latlng.lng;
+
+      clearLayers(); clearUI();
+
+      // Penyesuaian warna marker manual sesuai tema
+      const pulseColor = currentTheme === 'light' ? 'rgba(0,153,119,.25)' : 'rgba(0,255,204,.25)';
+      const glowColor = currentTheme === 'light' ? 'rgba(0,153,119,.6)' : 'rgba(0,255,204,.6)';
+      const mainColor = currentTheme === 'light' ? '#009977' : '#00ffcc';
+
+      const currentIconUser = L.divIcon({
+        html: `<div style="width:14px;height:14px;background:${mainColor};border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 4px ${pulseColor},0 0 12px ${glowColor}"></div>`,
+        className: '', iconSize: [14,14], iconAnchor: [7,7]
+      });
+
+      userMarker = L.marker([lat, lon], { icon: currentIconUser }).addTo(map)
+        .bindPopup(`
+          <div class="popup-title">📍 Posisi Simulasi</div>
+          <div class="popup-sub">
+            ${lat.toFixed(6)}, ${lon.toFixed(6)}<br>
+            Mode: Klik Manual
+          </div>`)
+        .openPopup();
+
+      console.log(`🖱️ Klik: lat=${lat.toFixed(6)}, lon=${lon.toFixed(6)}`);
+      fetchRute(lat, lon, null);
+    });
+
+    // ── MODE SWITCHER ─────────────────────────────────────
+    function setMode(m) {
+      mode = m;
+      document.getElementById('btn-mode-gps').classList.toggle('active',  m === 'gps');
+      document.getElementById('btn-mode-klik').classList.toggle('active', m === 'klik');
+      if (m === 'gps')  jalankanGPS();
+      if (m === 'klik') aktifkanModeKlik();
+    }
+
+    function onReload() {
+      if (mode === 'gps')  jalankanGPS();
+      if (mode === 'klik') aktifkanModeKlik();
+    }
+
+    // ── START ─────────────────────────────────────────────
+    window.onload = () => jalankanGPS();
+  </script>
+</body>
+</html>

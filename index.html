@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evakuasi Tsunami — Kota Padang</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-body: #0b0f15;
+      --bg-panel: rgba(255, 255, 255, 0.025);
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.06);
+      --accent: #34d1a0;
+      --accent-dim: rgba(52, 209, 160, 0.1);
+      --danger: #f06050;
+      --danger-dim: rgba(240, 96, 80, 0.1);
+      --text-main: #e8ecf1;
+      --text-muted: #6b7a8d;
+      --radius: 12px;
+    }
+
+    body.light-theme {
+      --bg-body: #fafbfc;
+      --bg-panel: rgba(0, 0, 0, 0.02);
+      --bg-card: rgba(0, 0, 0, 0.025);
+      --border: rgba(0, 0, 0, 0.07);
+      --accent: #1a9a6f;
+      --accent-dim: rgba(26, 154, 111, 0.08);
+      --danger: #c94040;
+      --danger-dim: rgba(201, 64, 64, 0.08);
+      --text-main: #1a1f26;
+      --text-muted: #8895a7;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-body);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      transition: background 0.25s ease, color 0.25s ease;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+    }
+
+    /* ── BACKGROUND SCENE ────────────────────── */
+    .bg-scene {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    body.light-theme .bg-grid {
+      background-image: radial-gradient(circle, rgba(0, 0, 0, 0.07) 1px, transparent 1px);
+    }
+
+    .bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(70px);
+      opacity: 0.5;
+      will-change: transform;
+    }
+
+    .bg-orb-1 {
+      width: 650px; height: 650px;
+      background: radial-gradient(circle, rgba(52, 209, 160, 0.5) 0%, transparent 70%);
+      top: -12%; right: -8%;
+      animation: orbFloat1 20s ease-in-out infinite;
+    }
+
+    .bg-orb-2 {
+      width: 550px; height: 550px;
+      background: radial-gradient(circle, rgba(240, 96, 80, 0.35) 0%, transparent 70%);
+      bottom: 8%; left: -10%;
+      animation: orbFloat2 24s ease-in-out infinite;
+    }
+
+    .bg-orb-3 {
+      width: 450px; height: 450px;
+      background: radial-gradient(circle, rgba(100, 140, 255, 0.3) 0%, transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      animation: orbFloat3 18s ease-in-out infinite;
+    }
+
+    body.light-theme .bg-orb { opacity: 0.45; filter: blur(90px); }
+    body.light-theme .bg-orb-1 { background: radial-gradient(circle, rgba(26, 154, 111, 0.45) 0%, transparent 70%); }
+    body.light-theme .bg-orb-2 { background: radial-gradient(circle, rgba(201, 64, 64, 0.35) 0%, transparent 70%); }
+    body.light-theme .bg-orb-3 { background: radial-gradient(circle, rgba(80, 120, 220, 0.3) 0%, transparent 70%); }
+
+    @keyframes orbFloat1 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(-40px, 30px) scale(1.05); }
+      66% { transform: translate(20px, -20px) scale(0.95); }
+    }
+
+    @keyframes orbFloat2 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -40px) scale(1.08); }
+      66% { transform: translate(-20px, 20px) scale(0.93); }
+    }
+
+    @keyframes orbFloat3 {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.15); }
+    }
+
+    .bg-topo {
+      position: absolute;
+      top: 15%; left: 55%;
+      width: 700px; height: 700px;
+      transform: translate(-50%, -50%);
+      opacity: 0.07;
+      background: repeating-radial-gradient(circle at center, transparent 0px, transparent 38px, rgba(52, 209, 160, 1) 39px, transparent 40px);
+      border-radius: 50%;
+    }
+
+    body.light-theme .bg-topo {
+      opacity: 0.1;
+      background: repeating-radial-gradient(circle at center, transparent 0px, transparent 38px, rgba(26, 154, 111, 0.8) 39px, transparent 40px);
+    }
+
+    .bg-vignette {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 50%, var(--bg-body) 100%);
+    }
+
+    /* ── LAYOUT ──────────────────────────────── */
+    header, main, footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .brand-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0;
+    }
+
+    .brand span {
+      font-size: 13px; font-weight: 600;
+      letter-spacing: 0.3px; color: var(--text-main);
+    }
+
+    .theme-switch {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 36px; height: 36px;
+      border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .theme-switch:hover {
+      border-color: var(--accent); color: var(--text-main);
+    }
+
+    .theme-switch svg {
+      width: 16px; height: 16px;
+      stroke: currentColor; stroke-width: 2; fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    main {
+      flex: 1; width: 100%; max-width: 960px;
+      margin: 0 auto; padding: 0 24px 80px 24px;
+      display: flex; flex-direction: column; gap: 80px;
+    }
+
+    /* ── HERO ─────────────────────────────────── */
+    .hero {
+      display: flex; flex-direction: column;
+      align-items: center; text-align: center;
+      gap: 20px; padding-top: 100px;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-label {
+      font-size: 11px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 2.5px;
+      color: var(--text-muted);
+    }
+
+    .hero h1 {
+      font-size: 52px; font-weight: 600;
+      line-height: 1.08; letter-spacing: -1.5px;
+      max-width: 700px;
+    }
+
+    .hero h1 .accent { color: var(--accent); }
+
+    .hero-desc {
+      font-size: 15px; font-weight: 400;
+      line-height: 1.65; color: var(--text-muted);
+      max-width: 480px;
+    }
+
+    .cta-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 12px; padding: 13px 32px;
+      background: var(--accent); color: #fff;
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      border: none; border-radius: 100px;
+      text-decoration: none; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .cta-btn:hover { filter: brightness(0.92); transform: translateY(-1px); }
+    .cta-btn .arrow { font-size: 16px; transition: transform 0.2s ease; }
+    .cta-btn:hover .arrow { transform: translateX(3px); }
+
+    /* ── SECTION COMMON ──────────────────────── */
+    .section-label {
+      font-size: 11px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 2.5px;
+      color: var(--text-muted); text-align: center;
+    }
+
+    .section-wrap {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 28px;
+      animation: fadeIn 0.6s ease-out backwards;
+    }
+
+
+    /* ── MAP PREVIEW ──────────────────────────── */
+    .map-preview-wrap {
+      width: 100%;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+      z-index: 1;
+    }
+
+    #mini-map {
+      width: 100%; height: 320px;
+    }
+
+    .map-overlay {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 20px 24px;
+      background: linear-gradient(to top, var(--bg-body) 0%, transparent 100%);
+      display: flex; justify-content: space-between;
+      align-items: flex-end; z-index: 500;
+      pointer-events: none;
+    }
+
+    .map-overlay-text {
+      font-size: 12px; color: var(--text-muted);
+    }
+
+    .map-overlay-text strong {
+      color: var(--text-main); font-weight: 600;
+    }
+
+    .map-overlay a {
+      pointer-events: auto;
+      font-size: 12px; font-weight: 600;
+      color: var(--accent); text-decoration: none;
+      display: flex; align-items: center; gap: 4px;
+      transition: opacity 0.2s;
+    }
+
+    .map-overlay a:hover { opacity: 0.8; }
+
+    /* ── FEATURES ─────────────────────────────── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px; width: 100%;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      padding: 28px;
+      display: flex; flex-direction: column; gap: 12px;
+      transition: all 0.2s ease;
+      animation: fadeIn 0.6s ease-out backwards;
+    }
+
+    .feature-card:nth-child(1) { animation-delay: 0.05s; }
+    .feature-card:nth-child(2) { animation-delay: 0.1s; }
+    .feature-card:nth-child(3) { animation-delay: 0.15s; }
+    .feature-card:nth-child(4) { animation-delay: 0.2s; }
+    .feature-card:hover { border-color: var(--border); transform: translateY(-2px); }
+
+    .feature-card h3 {
+      font-size: 15px; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .feature-card h3 .ico {
+      flex-shrink: 0; width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .feature-card h3 .ico svg {
+      width: 18px; height: 18px;
+      stroke: var(--accent); stroke-width: 2; fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .feature-card p {
+      font-size: 13.5px; line-height: 1.6; color: var(--text-muted);
+    }
+
+    /* ── ABOUT ────────────────────────────────── */
+    .about-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      width: 100%;
+    }
+
+    .about-card h2 {
+      font-size: 18px; font-weight: 600;
+      letter-spacing: -0.2px; margin-bottom: 12px;
+    }
+
+    .about-card > p {
+      font-size: 14px; color: var(--text-muted);
+      line-height: 1.7; margin-bottom: 24px;
+    }
+
+    .tech-stack {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+
+    .tech-tag {
+      font-size: 11px; font-weight: 500;
+      padding: 6px 14px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 100px;
+      border: 1px solid rgba(52,209,160,.12);
+      letter-spacing: 0.2px;
+    }
+
+    body.light-theme .tech-tag {
+      border-color: rgba(26,154,111,.15);
+    }
+
+    /* ── MITIGATION ───────────────────────────── */
+    .mitigation {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 48px;
+      display: flex; flex-direction: column; gap: 36px;
+      animation: fadeIn 0.6s ease-out backwards;
+      animation-delay: 0.25s;
+    }
+
+    .mitigation-head {
+      text-align: center; max-width: 520px; margin: 0 auto;
+    }
+
+    .mitigation-head h2 {
+      font-size: 22px; font-weight: 600;
+      letter-spacing: -0.3px; margin-bottom: 10px;
+    }
+
+    .mitigation-head p {
+      font-size: 14px; color: var(--text-muted); line-height: 1.6;
+    }
+
+    .mitigation-list { display: flex; flex-direction: column; }
+
+    .mitigation-item {
+      display: flex; gap: 20px;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mitigation-item:first-child { padding-top: 0; }
+    .mitigation-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .mitigation-item .num {
+      font-size: 15px; font-weight: 700;
+      color: var(--accent); flex-shrink: 0;
+      width: 32px; padding-top: 1px;
+    }
+
+    .mitigation-item .content h4 {
+      font-size: 15px; font-weight: 600; margin-bottom: 6px;
+    }
+
+    .mitigation-item .content p {
+      font-size: 13.5px; line-height: 1.6; color: var(--text-muted);
+    }
+
+    /* ── TEAM ─────────────────────────────────── */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px; width: 100%;
+    }
+
+    .team-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 16px;
+      text-align: center;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .team-card:hover { border-color: rgba(52,209,160,.15); transform: translateY(-2px); }
+
+    .team-avatar {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      border: 2px solid var(--accent);
+      margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700;
+      color: var(--accent);
+    }
+
+    .team-card .name {
+      font-size: 13px; font-weight: 600;
+      line-height: 1.3; margin-bottom: 4px;
+    }
+
+    .team-card .nim {
+      font-size: 10px; font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── FOOTER ───────────────────────────────── */
+    footer {
+      width: 100%; max-width: 960px;
+      margin: 0 auto;
+      border-top: 1px solid var(--border);
+      padding: 24px; text-align: center;
+    }
+
+    footer p {
+      font-size: 12px; color: var(--text-muted);
+    }
+
+    /* ── RESPONSIVE ───────────────────────────── */
+    @media (max-width: 640px) {
+      .hero { padding-top: 60px; }
+      .hero h1 { font-size: 36px; letter-spacing: -1px; }
+      main { gap: 56px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: 1fr; }
+      .team-grid { grid-template-columns: 1fr 1fr; }
+      .mitigation { padding: 28px; }
+      .about-card { padding: 24px; }
+      #mini-map { height: 220px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Background atmosphere -->
+  <div class="bg-scene">
+    <div class="bg-grid"></div>
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+    <div class="bg-topo"></div>
+    <div class="bg-vignette"></div>
+  </div>
+
+  <header>
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <span>Tsunami Routing</span>
+    </div>
+    <button id="theme-btn" class="theme-switch" onclick="toggleTheme()" title="Ubah Tema">
+      <svg viewBox="0 0 24 24">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />
+      </svg>
+    </button>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <p class="hero-label">Kota Padang · Sumatra Barat</p>
+      <h1>Evakuasi Tsunami<br><span class="accent">Mandiri</span></h1>
+      <p class="hero-desc">WebGIS interaktif berbasis pgRouting untuk memandu warga pesisir menuju shelter evakuasi terdekat melalui rute tercepat.</p>
+      <a href="map.html" class="cta-btn">
+        Buka Peta Evakuasi <span class="arrow">→</span>
+      </a>
+    </section>
+
+
+    <!-- Map Preview -->
+    <section class="section-wrap">
+      <p class="section-label">Area Cakupan</p>
+      <div class="map-preview-wrap">
+        <div id="mini-map"></div>
+        <div class="map-overlay">
+          <div class="map-overlay-text">
+            <strong>Kota Padang</strong> — Wilayah pesisir rawan tsunami
+          </div>
+          <a href="map.html">Buka peta penuh →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section-wrap">
+      <p class="section-label">Fitur Utama</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h3><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="3" /><path d="M12 2a8 8 0 0 0-8 8c0 5.4 7.05 11.5 7.35 11.76a1 1 0 0 0 1.3 0C13 21.5 20 15.4 20 10a8 8 0 0 0-8-8z" /></svg></span> GPS Otomatis</h3>
+          <p>Deteksi koordinat lokasi secara instan melalui sensor GPS browser dengan estimasi radius akurasi.</p>
+        </div>
+        <div class="feature-card">
+          <h3><span class="ico"><svg viewBox="0 0 24 24"><path d="M3 17l4-4 4 4 6-8 4 4" /><polyline points="17 7 21 7 21 11" /></svg></span> Dijkstra Routing</h3>
+          <p>Pencarian rute terpendek menggunakan algoritma pgr_dijkstra di jaringan jalan spasial PostGIS.</p>
+        </div>
+        <div class="feature-card">
+          <h3><span class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M9 22V12h6v10" /><path d="M8 6h.01M16 6h.01M12 6h.01" /></svg></span> Shelter Terdekat</h3>
+          <p>Pemetaan otomatis shelter evakuasi terdekat lengkap dengan estimasi jarak dan waktu tempuh berjalan kaki.</p>
+        </div>
+        <div class="feature-card">
+          <h3><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg></span> Fallback Mode</h3>
+          <p>Estimasi garis lurus langsung ke shelter jika jaringan jalan tidak tersedia di sekitar titik lokasi.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tentang Proyek -->
+    <section class="section-wrap">
+      <p class="section-label">Tentang Proyek</p>
+      <div class="about-card">
+        <h2>Sistem Rute Evakuasi Tsunami Kota Padang</h2>
+        <p>Proyek ini merupakan Tugas Besar mata kuliah Analisis Spasial yang bertujuan membangun WebGIS interaktif untuk menentukan rute evakuasi tsunami tercepat bagi warga pesisir Kota Padang. Sistem ini memanfaatkan analisis jaringan jalan spasial dengan algoritma Dijkstra untuk menghasilkan jalur terpendek menuju shelter evakuasi terdekat secara otomatis.</p>
+        <div class="tech-stack">
+          <span class="tech-tag">Leaflet.js</span>
+          <span class="tech-tag">PostgreSQL</span>
+          <span class="tech-tag">PostGIS</span>
+          <span class="tech-tag">pgRouting</span>
+          <span class="tech-tag">Express.js</span>
+          <span class="tech-tag">Node.js</span>
+          <span class="tech-tag">OpenStreetMap</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mitigation -->
+    <section class="mitigation">
+      <div class="mitigation-head">
+        <h2>Panduan Siaga Tsunami</h2>
+        <p>Tsunami dapat terjadi 20–30 menit setelah gempa besar. Pahami langkah-langkah berikut.</p>
+      </div>
+      <div class="mitigation-list">
+        <div class="mitigation-item">
+          <div class="num">01</div>
+          <div class="content">
+            <h4>Aturan 20-20-20</h4>
+            <p>Gempa selama <strong>20 detik</strong> — evakuasi dalam <strong>20 menit</strong> — ke ketinggian minimal <strong>20 meter</strong>.</p>
+          </div>
+        </div>
+        <div class="mitigation-item">
+          <div class="num">02</div>
+          <div class="content">
+            <h4>Kenali Tanda Alam</h4>
+            <p>Air laut surut mendadak, gempa kuat berkepanjangan, atau suara gemuruh dari arah laut.</p>
+          </div>
+        </div>
+        <div class="mitigation-item">
+          <div class="num">03</div>
+          <div class="content">
+            <h4>Gunakan Jalur Evakuasi</h4>
+            <p>Segera berlari ke shelter terdekat mengikuti rambu evakuasi. Hindari kendaraan pribadi di jalanan padat.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tim -->
+    <section class="section-wrap">
+      <p class="section-label">Tim Pengembang</p>
+      <div class="team-grid">
+        <div class="team-card">
+          <div class="team-avatar">AI</div>
+          <div class="name">Ahmad Iqbal Ramadhan</div>
+          <div class="nim">2311523018</div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar">RA</div>
+          <div class="name">Rahil Akram Hammad</div>
+          <div class="nim">2311523012</div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar">HA</div>
+          <div class="name">Hasbi Ash Shiddiqi</div>
+          <div class="nim">2311523014</div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar">NN</div>
+          <div class="name">Nayla Nurul Afifah</div>
+          <div class="nim">2311522002</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 Tugas Besar Analisis Spasial · Sistem Informasi · Universitas Andalas</p>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ── THEME ──────────────────────────────────
+    let currentTheme = localStorage.getItem('theme') || 'dark';
+    let miniTileLayer = null;
+    let miniMap = null;
+
+    applyTheme(currentTheme);
+
+    function applyTheme(theme) {
+      currentTheme = theme;
+      const themeBtn = document.getElementById('theme-btn');
+
+      if (theme === 'light') {
+        document.body.classList.add('light-theme');
+        if (themeBtn) themeBtn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.body.classList.remove('light-theme');
+        if (themeBtn) themeBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>';
+        localStorage.setItem('theme', 'dark');
+      }
+
+      // Update mini map tiles
+      if (miniMap && miniTileLayer) {
+        miniMap.removeLayer(miniTileLayer);
+        miniTileLayer = L.tileLayer(
+          theme === 'light'
+            ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+          { attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19 }
+        ).addTo(miniMap);
+      }
+    }
+
+    function toggleTheme() {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    }
+
+    // ── MINI MAP ───────────────────────────────
+    const miniMapEl = document.getElementById('mini-map');
+
+    function initMiniMap() {
+      if (miniMap) return;
+      miniMap = L.map('mini-map', {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        touchZoom: false,
+        keyboard: false
+      }).setView([-0.9471, 100.4172], 13);
+
+      miniTileLayer = L.tileLayer(
+        currentTheme === 'light'
+          ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+          : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        { attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19 }
+      ).addTo(miniMap);
+
+      // Multiple invalidateSize attempts to ensure tiles load
+      setTimeout(() => miniMap.invalidateSize(), 100);
+      setTimeout(() => miniMap.invalidateSize(), 500);
+      setTimeout(() => miniMap.invalidateSize(), 1500);
+    }
+
+    // Initialize when map section scrolls into view
+    const mapObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          initMiniMap();
+          mapObserver.disconnect();
+        }
+      });
+    }, { rootMargin: '200px' });
+
+    mapObserver.observe(miniMapEl);
+
+    // Also try on load as fallback
+    window.addEventListener('load', () => {
+      setTimeout(initMiniMap, 800);
+    });
+
+  </script>
+</body>
+
+</html>
