@@ -60,10 +60,50 @@
       -webkit-backdrop-filter: blur(28px);
       overflow: hidden;
       box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 28px rgba(0,0,0,0.22);
-      transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s;
     }
     body.light-theme #panel {
       box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 28px rgba(0,0,0,0.08);
+    }
+
+    /* Collapse button */
+    #panel-toggle-btn {
+      position: absolute;
+      top: 14px;
+      left: 276px; /* 14px (left) + 248px (panel width) + 14px gap */
+      z-index: 1000;
+      width: 32px;
+      height: 32px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s, background 0.25s, border-color 0.25s;
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+    }
+    #panel-toggle-btn:hover {
+      color: var(--text-main);
+      border-color: var(--cyan);
+    }
+    #panel-toggle-btn svg {
+      width: 16px;
+      height: 16px;
+      transition: transform 0.3s;
+    }
+    body.panel-collapsed #panel {
+      transform: translateX(-276px);
+    }
+    body.panel-collapsed #panel-toggle-btn {
+      left: 14px;
+    }
+    body.panel-collapsed #panel-toggle-btn svg {
+      transform: rotate(180deg);
     }
 
     /* ── Top bar ── */
@@ -135,23 +175,24 @@
 
     /* ── Panel body ── */
     #panel-body {
-      padding: 10px 12px;
-      display: flex; flex-direction: column; gap: 8px;
+      padding: 8px 10px;
+      display: flex; flex-direction: column;
+      gap: 6px;
     }
 
     /* ── Mode toggle ── */
     #mode-toggle {
       display: flex;
       background: var(--bg-card);
-      border-radius: 7px;
+      border-radius: 6px;
       padding: 2px;
       border: 1px solid var(--border);
     }
     .mode-btn {
       flex: 1;
-      padding: 5px 0;
-      font-size: 11px; font-weight: 500;
-      border-radius: 5px; border: none;
+      padding: 4px 0;
+      font-size: 10.5px; font-weight: 500;
+      border-radius: 4px; border: none;
       background: transparent;
       color: var(--text-muted);
       cursor: pointer;
@@ -169,10 +210,10 @@
     /* ── Status badge ── */
     #status-badge {
       display: flex; align-items: center; gap: 6px;
-      padding: 6px 10px;
+      padding: 5px 8px;
       border: 1px solid var(--border);
       border-radius: 6px;
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
       transition: all 0.2s;
       line-height: 1.3;
@@ -196,18 +237,18 @@
     .info-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 7px;
-      padding: 8px 10px;
+      border-radius: 6px;
+      padding: 6px 8px;
       display: none;
     }
     .info-card.visible { display: block; }
     .card-label {
-      font-size: 9px; text-transform: uppercase;
-      letter-spacing: 1.2px; color: var(--text-muted);
-      margin-bottom: 3px; font-weight: 500;
+      font-size: 8px; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text-muted);
+      margin-bottom: 2px; font-weight: 600;
     }
-    .card-value { font-size: 12px; font-weight: 600; line-height: 1.3; }
-    .card-sub   { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+    .card-value { font-size: 11px; font-weight: 600; line-height: 1.3; }
+    .card-sub   { font-size: 9.5px; color: var(--text-muted); margin-top: 1px; }
 
     /* ── Stats grid ── */
     #stats-grid {
@@ -218,48 +259,48 @@
     #stats-grid.visible { display: grid; }
     .stat-box {
       border: 1px solid var(--border);
-      border-radius: 7px;
-      padding: 8px 4px;
+      background: var(--bg-card);
+      border-radius: 6px;
+      padding: 6px 2px;
       text-align: center;
     }
     .stat-box .sv {
-      font-size: 14px; font-weight: 700;
-      color: var(--cyan); line-height: 1;
+      font-size: 13px; font-weight: 700;
+      color: var(--cyan); line-height: 1.1;
       font-variant-numeric: tabular-nums;
       letter-spacing: -0.3px;
     }
     .stat-box .sl {
       font-size: 8px; color: var(--text-muted);
-      margin-top: 3px; text-transform: uppercase;
-      letter-spacing: 0.6px; font-weight: 500;
+      margin-top: 2px; text-transform: uppercase;
+      letter-spacing: 0.5px; font-weight: 500;
     }
 
     /* ── Click hint ── */
     #click-hint {
       display: none;
-      padding: 7px 10px;
+      padding: 5px 8px;
       background: var(--cyan-dim);
       border: 1px dashed rgba(52,209,160,.2);
       border-radius: 6px;
-      font-size: 11px;
+      font-size: 10px;
       color: var(--cyan);
       text-align: center;
-      line-height: 1.4;
+      line-height: 1.35;
     }
     #click-hint.visible { display: block; }
 
     /* ── Action btn ── */
     .action-btn {
-      background: transparent;
-      color: var(--text-muted);
+      background: var(--bg-card);
+      color: var(--text-main);
       border: 1px solid var(--border);
-      border-radius: 7px;
-      padding: 7px 10px;
-      font-size: 11px; font-weight: 500;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 10.5px; font-weight: 500;
       font-family: inherit;
       cursor: pointer; width: 100%;
       transition: all 0.2s;
-      letter-spacing: 0.15px;
     }
     .action-btn:hover {
       background: var(--cyan-dim);
@@ -267,6 +308,310 @@
       color: var(--cyan);
     }
     .action-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+    /* ── BPBD toggle ── */
+    .bpbd-toggle {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 10px;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg-card);
+      font-family: inherit;
+      width: 100%;
+    }
+    .bpbd-toggle:hover { border-color: var(--red); background: rgba(240, 96, 80, 0.03); }
+    .bpbd-toggle .bpbd-icon {
+      width: 16px; height: 16px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .bpbd-toggle .bpbd-icon svg {
+      width: 12px; height: 12px;
+      stroke: var(--text-muted); stroke-width: 2; fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+      transition: stroke 0.2s;
+    }
+    .bpbd-toggle .bpbd-label {
+      font-size: 9.5px; font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      transition: color 0.2s;
+    }
+    .bpbd-toggle.active {
+      border-color: rgba(240,96,80,.4);
+      border-style: solid;
+      background: rgba(240,96,80,.08);
+    }
+    .bpbd-toggle.active .bpbd-icon svg { stroke: var(--red); }
+    .bpbd-toggle.active .bpbd-label { color: var(--red); }
+
+    /* ── BPBD panel ── */
+    #bpbd-panel {
+      display: none;
+      flex-direction: column; gap: 4px;
+    }
+    #bpbd-panel.visible { display: flex; }
+
+    .bpbd-hint {
+      padding: 5px 8px;
+      background: rgba(240,96,80,.04);
+      border: 1px dashed rgba(240,96,80,.15);
+      border-radius: 6px;
+      font-size: 9.5px;
+      color: var(--red);
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    .blocked-list {
+      display: flex; flex-direction: column; gap: 4px;
+      max-height: 120px;
+      overflow-y: auto;
+      margin-top: 4px;
+    }
+    .blocked-list::-webkit-scrollbar { width: 3px; }
+    .blocked-list::-webkit-scrollbar-thumb {
+      background: var(--border); border-radius: 3px;
+    }
+
+    .blocked-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-card);
+      animation: fadeSlideIn 0.2s ease-out;
+    }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .blocked-item .blocked-color {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--red);
+      flex-shrink: 0;
+    }
+    .blocked-item .blocked-name {
+      flex: 1;
+      font-size: 9.5px; font-weight: 500;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .blocked-item .unblock-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 8px; font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .blocked-item .unblock-btn:hover {
+      background: var(--cyan-dim);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .blocked-count {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 2px 0;
+    }
+    .blocked-count strong { color: var(--red); font-weight: 700; }
+
+    .bpbd-clear-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 9px; font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    .bpbd-clear-btn:hover {
+      background: rgba(240,96,80,.06);
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    /* ── MODAL PASSWORD ────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(4, 6, 10, 0.7);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .modal-overlay.visible {
+      display: flex;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .modal-content {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 320px;
+      padding: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      transform: scale(0.95);
+      transition: transform 0.2s;
+      animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    @keyframes scaleUp {
+      to { transform: scale(1); }
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      transition: color 0.2s;
+      line-height: 1;
+    }
+    .modal-close:hover {
+      color: var(--red);
+    }
+    .modal-body p {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+    .password-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .password-input-wrapper input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 36px 8px 10px;
+      color: var(--text-main);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    .password-input-wrapper input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 2px var(--cyan-dim);
+    }
+    .toggle-password-btn {
+      position: absolute;
+      right: 10px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s;
+    }
+    .toggle-password-btn:hover {
+      color: var(--text-main);
+    }
+    .toggle-password-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .modal-error-msg {
+      display: none;
+      font-size: 10.5px;
+      color: var(--red);
+      margin-top: 4px;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .modal-btn {
+      padding: 7px 14px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .modal-btn.btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .modal-btn.btn-secondary:hover {
+      background: var(--bg-card);
+      color: var(--text-main);
+    }
+    .modal-btn.btn-primary {
+      background: var(--cyan);
+      border: 1px solid var(--cyan);
+      color: #fff;
+      font-weight: 600;
+    }
+    .modal-btn.btn-primary:hover {
+      background: #2cb58a;
+      border-color: #2cb58a;
+      box-shadow: 0 0 12px rgba(52, 209, 160, 0.3);
+    }
+    body:not(.light-theme) .modal-btn.btn-primary {
+      color: #080b10;
+    }
+    #confirm-submit-btn {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+    }
+    #confirm-submit-btn:hover {
+      background: #d94e3f;
+      border-color: #d94e3f;
+      box-shadow: 0 0 12px rgba(240, 96, 80, 0.3);
+    }
+    body:not(.light-theme) #confirm-submit-btn {
+      color: #fff;
+    }
 
     /* ── Fallback notif ── */
     #fallback-notif {
@@ -283,6 +628,24 @@
       border-radius: 100px;
       backdrop-filter: blur(12px);
       white-space: nowrap;
+    }
+
+    /* ── Block notif (toast) ── */
+    #block-notif {
+      display: none;
+      position: absolute;
+      bottom: 16px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      background: rgba(240,96,80,.1);
+      border: 1px solid rgba(240,96,80,.25);
+      color: var(--red);
+      font-size: 11px; font-weight: 500;
+      padding: 6px 16px;
+      border-radius: 100px;
+      backdrop-filter: blur(12px);
+      white-space: nowrap;
+      animation: fadeSlideIn 0.25s ease-out;
     }
 
     /* ── Leaflet overrides ────────────────── */
@@ -375,10 +738,79 @@
       </div>
 
       <button class="action-btn" id="btn-reload" onclick="onReload()">Lacak Ulang</button>
+
+      <!-- BPBD Section -->
+      <div style="border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px;"></div>
+
+      <button class="bpbd-toggle" id="bpbd-toggle" onclick="toggleBPBD()">
+        <span class="bpbd-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </span>
+        <span class="bpbd-label">Mode BPBD (Petugas)</span>
+      </button>
+
+      <div id="bpbd-panel">
+        <div class="bpbd-hint" id="bpbd-hint">Klik jalan di peta untuk memblokir</div>
+        <div class="blocked-count" id="blocked-count"></div>
+        <div class="blocked-list" id="blocked-list"></div>
+        <button class="bpbd-clear-btn" id="bpbd-clear-btn" onclick="bukaSemuaBlokir()" style="display:none">Buka Semua Blokir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Toggle Button (Collapse) -->
+  <button id="panel-toggle-btn" onclick="togglePanel()" title="Sembunyikan Panel">
+    <svg id="panel-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+  </button>
+
+  <!-- Modal Password BPBD -->
+  <div id="password-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Akses Petugas BPBD</h3>
+        <button class="modal-close" onclick="closePasswordModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Masukkan password untuk mengakses mode pemblokiran jalan evakuasi.</p>
+        <div class="password-input-wrapper">
+          <input type="password" id="bpbd-password-input" placeholder="Password..." onkeydown="handlePasswordKey(event)">
+          <button class="toggle-password-btn" onclick="togglePasswordVisibility()" title="Lihat/Sembunyikan Password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <div id="password-error" class="modal-error-msg">Password salah! Silakan coba lagi.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn btn-secondary" onclick="closePasswordModal()">Batal</button>
+        <button class="modal-btn btn-primary" onclick="submitPassword()">Verifikasi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Konfirmasi Buka Blokir -->
+  <div id="confirm-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="confirm-title">Konfirmasi</h3>
+        <button class="modal-close" onclick="closeConfirmModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message">Apakah Anda yakin ingin membuka kembali jalan ini?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn btn-secondary" onclick="closeConfirmModal()">Batal</button>
+        <button class="modal-btn btn-primary" id="confirm-submit-btn">Ya, Buka</button>
+      </div>
     </div>
   </div>
 
   <div id="fallback-notif">Rute jalan tidak tersedia — menampilkan garis lurus estimasi</div>
+  <div id="block-notif" id="block-notif"></div>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -388,12 +820,15 @@
 
     // ── STATE ─────────────────────────────────────────────
     let mode = 'gps';
+    let bpbdMode = false;
     let userMarker = null, shelterMarker = null, routeLayer = null, accuracyCircle = null;
     let currentTheme = localStorage.getItem('theme') || 'dark';
     let tileLayer = null;
+    let blockedLayer = null;  // Layer group untuk jalan diblokir
 
     // ── MAP ───────────────────────────────────────────────
-    const map = L.map('map', { zoomControl: true }).setView([-0.9471, 100.4172], 13);
+    const map = L.map('map', { zoomControl: false }).setView([-0.9471, 100.4172], 13);
+    L.control.zoom({ position: 'topright' }).addTo(map);
     
     // Inisialisasi basemap awal berdasarkan tema aktif
     applyTheme(currentTheme);
@@ -692,10 +1127,17 @@
     }
 
     map.on('click', function(e) {
-      if (mode !== 'klik') return;
-
       const lat = e.latlng.lat;
       const lon = e.latlng.lng;
+
+      // ── BPBD MODE: Blokir jalan ──
+      if (bpbdMode) {
+        blokirJalan(lat, lon);
+        return;
+      }
+
+      // ── MODE KLIK MANUAL ──
+      if (mode !== 'klik') return;
 
       clearLayers(); clearUI();
 
@@ -736,8 +1178,262 @@
       if (mode === 'klik') aktifkanModeKlik();
     }
 
+    // ============================================================
+    // BPBD MODE — BLOKIR / BUKA JALAN
+    // ============================================================
+    const BPBD_PASSWORD = 'bpbd2026';
+
+    function toggleBPBD() {
+      if (!bpbdMode) {
+        openPasswordModal();
+      } else {
+        bpbdMode = false;
+        document.getElementById('bpbd-toggle').classList.remove('active');
+        document.getElementById('bpbd-panel').classList.remove('visible');
+        setStatus('success', 'Mode BPBD dinonaktifkan');
+        console.log('[BPBD] Mode BPBD dinonaktifkan');
+      }
+    }
+
+    function openPasswordModal() {
+      const modal = document.getElementById('password-modal');
+      const input = document.getElementById('bpbd-password-input');
+      const error = document.getElementById('password-error');
+      input.value = '';
+      input.type = 'password';
+      error.style.display = 'none';
+      modal.classList.add('visible');
+      setTimeout(() => input.focus(), 100);
+    }
+
+    function closePasswordModal() {
+      document.getElementById('password-modal').classList.remove('visible');
+    }
+
+    function handlePasswordKey(e) {
+      if (e.key === 'Enter') submitPassword();
+    }
+
+    function togglePasswordVisibility() {
+      const input = document.getElementById('bpbd-password-input');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function submitPassword() {
+      const input = document.getElementById('bpbd-password-input');
+      const error = document.getElementById('password-error');
+      if (input.value === BPBD_PASSWORD) {
+        bpbdMode = true;
+        document.getElementById('bpbd-toggle').classList.add('active');
+        document.getElementById('bpbd-panel').classList.add('visible');
+        setStatus('loading', 'Mode BPBD aktif — klik jalan untuk blokir');
+        console.log('[BPBD] Mode BPBD diaktifkan');
+        closePasswordModal();
+      } else {
+        error.style.display = 'block';
+        input.focus();
+        input.select();
+      }
+    }
+
+    function togglePanel() {
+      document.body.classList.toggle('panel-collapsed');
+      const btn = document.getElementById('panel-toggle-btn');
+      if (document.body.classList.contains('panel-collapsed')) {
+        btn.title = "Tampilkan Panel";
+      } else {
+        btn.title = "Sembunyikan Panel";
+      }
+      setTimeout(() => { map.invalidateSize(); }, 300);
+    }
+
+    let confirmCallback = null;
+
+    function showConfirmModal(title, message, callback) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      confirmCallback = callback;
+      document.getElementById('confirm-modal').classList.add('visible');
+      document.getElementById('confirm-submit-btn').focus();
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirm-modal').classList.remove('visible');
+      confirmCallback = null;
+    }
+
+    document.getElementById('confirm-submit-btn').onclick = function() {
+      if (confirmCallback) confirmCallback();
+      closeConfirmModal();
+    };
+
+    function konfirmasiBukaBlokir(id, namaJalan) {
+      showConfirmModal(
+        'Buka Blokir Jalan',
+        `Apakah Anda yakin ingin membuka blokir untuk jalan "${namaJalan}"?`,
+        () => {
+          bukaBlokir(id);
+        }
+      );
+    }
+
+    // Blokir jalan terdekat dari koordinat klik
+    async function blokirJalan(lat, lon) {
+      setStatus('loading', 'Memblokir jalan...');
+      try {
+        const r = await fetch(`${BACKEND}/api/jalan/blokir`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+          body: JSON.stringify({ lat, lon })
+        });
+        const data = await r.json();
+
+        if (!data.success) {
+          setStatus('error', data.message || 'Gagal memblokir jalan.');
+          return;
+        }
+
+        console.log(`[BPBD] Jalan diblokir: ${data.jalan.name} (ID: ${data.jalan.id})`);
+        showBlockNotif(`🚫 ${data.jalan.name} diblokir`);
+        setStatus('success', `"${data.jalan.name}" berhasil diblokir`);
+
+        // Refresh tampilan jalan diblokir
+        await muatJalanDiblokir();
+      } catch (err) {
+        console.error('❌ Blokir error:', err);
+        setStatus('error', 'Gagal menghubungi server.');
+      }
+    }
+
+    // Buka blokir jalan berdasarkan ID
+    async function bukaBlokir(id) {
+      try {
+        const r = await fetch(`${BACKEND}/api/jalan/buka`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+          body: JSON.stringify({ id })
+        });
+        const data = await r.json();
+
+        if (!data.success) {
+          setStatus('error', data.message || 'Gagal membuka blokir.');
+          return;
+        }
+
+        console.log(`[BPBD] Jalan ID=${id} dibuka kembali`);
+        showBlockNotif(`✅ Jalan ID ${id} dibuka kembali`);
+        setStatus('success', `Jalan ID ${id} dibuka kembali`);
+
+        await muatJalanDiblokir();
+      } catch (err) {
+        console.error('❌ Buka blokir error:', err);
+        setStatus('error', 'Gagal menghubungi server.');
+      }
+    }
+
+    // Buka semua blokir
+    async function bukaSemuaBlokir() {
+      showConfirmModal(
+        'Buka Semua Blokir',
+        'Apakah Anda yakin ingin membuka kembali semua jalan yang saat ini diblokir?',
+        async () => {
+          const items = document.querySelectorAll('.blocked-item');
+          for (const item of items) {
+            const id = item.dataset.id;
+            await bukaBlokir(id);
+          }
+        }
+      );
+    }
+
+    // Muat dan gambar semua jalan yang diblokir
+    async function muatJalanDiblokir() {
+      try {
+        const r = await fetch(`${BACKEND}/api/jalan/diblokir`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
+        const geojson = await r.json();
+
+        // Hapus layer lama
+        if (blockedLayer) map.removeLayer(blockedLayer);
+
+        // Gambar polyline merah untuk setiap jalan diblokir
+        blockedLayer = L.layerGroup();
+        geojson.features.forEach(f => {
+          const coords = geojsonKeLatLng([f]);
+          if (coords.length >= 2) {
+            L.polyline(coords, {
+              color: '#ff4444',
+              weight: 6,
+              opacity: 0.8,
+              dashArray: '10 6',
+              lineJoin: 'round',
+              lineCap: 'round'
+            }).bindPopup(`
+              <div class="popup-title" style="color:var(--red)">🚫 Jalan Diblokir</div>
+              <div class="popup-sub">
+                ${f.properties.name}<br>
+                ID: ${f.properties.id}
+              </div>
+            `).addTo(blockedLayer);
+          }
+        });
+        blockedLayer.addTo(map);
+
+        // Update panel daftar jalan diblokir
+        renderBlockedList(geojson.features);
+      } catch (err) {
+        console.error('❌ Gagal memuat jalan diblokir:', err);
+      }
+    }
+
+    // Render daftar jalan diblokir di panel
+    function renderBlockedList(features) {
+      const listEl = document.getElementById('blocked-list');
+      const countEl = document.getElementById('blocked-count');
+      const clearBtn = document.getElementById('bpbd-clear-btn');
+
+      listEl.innerHTML = '';
+      const total = features.length;
+
+      if (total === 0) {
+        countEl.textContent = 'Belum ada jalan yang diblokir';
+        clearBtn.style.display = 'none';
+        return;
+      }
+
+      countEl.innerHTML = `<strong>${total}</strong> jalan diblokir`;
+      clearBtn.style.display = 'block';
+
+      features.forEach(f => {
+        const item = document.createElement('div');
+        item.className = 'blocked-item';
+        item.dataset.id = f.properties.id;
+        const escapedName = f.properties.name ? f.properties.name.replace(/'/g, "\\'") : 'Jalan tanpa nama';
+        item.innerHTML = `
+          <div class="blocked-color"></div>
+          <div class="blocked-name" title="${escapedName} (ID: ${f.properties.id})">${escapedName}</div>
+          <button class="unblock-btn" onclick="konfirmasiBukaBlokir(${f.properties.id}, '${escapedName}')">Buka</button>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    // Toast notifikasi blokir
+    let blockNotifTimer = null;
+    function showBlockNotif(msg) {
+      const el = document.getElementById('block-notif');
+      el.textContent = msg;
+      el.style.display = 'block';
+      clearTimeout(blockNotifTimer);
+      blockNotifTimer = setTimeout(() => { el.style.display = 'none'; }, 3000);
+    }
+
     // ── START ─────────────────────────────────────────────
-    window.onload = () => jalankanGPS();
+    window.onload = () => {
+      jalankanGPS();
+      muatJalanDiblokir(); // Muat jalan diblokir saat halaman dibuka
+    };
   </script>
 </body>
 </html>

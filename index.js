@@ -180,7 +180,7 @@ app.get("/api/rute-otomatis", async (req, res) => {
         )::json AS geometry
       FROM pgr_dijkstra(
         'SELECT id, source::bigint, target::bigint, length_m AS cost
-         FROM public.jaringan_ways WHERE length_m > 0',
+         FROM public.jaringan_ways WHERE length_m > 0 AND is_blocked = FALSE',
         $1::bigint, $2::bigint,
         directed := false
       ) AS r
@@ -259,6 +259,103 @@ app.get("/api/rute-otomatis", async (req, res) => {
   } catch (err) {
     console.error("ERROR:", err.message);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
+// ENDPOINT BPBD — BLOKIR / BUKA JALAN
+// ============================================================
+
+// Blokir jalan terdekat dari koordinat klik
+app.post("/api/jalan/blokir", async (req, res) => {
+  const { lat, lon } = req.body;
+  if (!lat || !lon)
+    return res.status(400).json({ success: false, error: "Parameter lat dan lon wajib." });
+
+  try {
+    const result = await pool.query(
+      `SELECT id, COALESCE(name, 'Jalan tanpa nama') AS name,
+              ST_AsGeoJSON(geom)::json AS geometry,
+              ST_Distance(geom::geography,
+                ST_SetSRID(ST_MakePoint($1,$2),4326)::geography) AS jarak_meter
+       FROM public.jaringan_ways
+       WHERE is_blocked = FALSE
+       ORDER BY geom <-> ST_SetSRID(ST_MakePoint($1,$2), 4326)
+       LIMIT 1`,
+      [parseFloat(lon), parseFloat(lat)]
+    );
+
+    if (result.rows.length === 0)
+      return res.status(404).json({ success: false, message: "Jalan tidak ditemukan." });
+
+    const jalan = result.rows[0];
+
+    await pool.query(
+      `UPDATE public.jaringan_ways SET is_blocked = TRUE WHERE id = $1`,
+      [jalan.id]
+    );
+
+    console.log(`[BPBD] Blokir jalan ID=${jalan.id} "${jalan.name}"`);
+
+    res.json({
+      success: true,
+      message: `Jalan "${jalan.name}" (ID: ${jalan.id}) berhasil diblokir.`,
+      jalan: {
+        id: jalan.id,
+        name: jalan.name,
+        geometry: jalan.geometry,
+        jarak_meter: parseFloat(jalan.jarak_meter).toFixed(1),
+      },
+    });
+  } catch (err) {
+    console.error("ERROR blokir:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Buka blokir jalan berdasarkan ID
+app.post("/api/jalan/buka", async (req, res) => {
+  const { id } = req.body;
+  if (!id)
+    return res.status(400).json({ success: false, error: "Parameter id wajib." });
+
+  try {
+    await pool.query(
+      `UPDATE public.jaringan_ways SET is_blocked = FALSE WHERE id = $1`,
+      [parseInt(id)]
+    );
+
+    console.log(`[BPBD] Buka blokir jalan ID=${id}`);
+    res.json({ success: true, message: `Jalan ID ${id} berhasil dibuka kembali.` });
+  } catch (err) {
+    console.error("ERROR buka blokir:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Ambil semua jalan yang diblokir sebagai GeoJSON
+app.get("/api/jalan/diblokir", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, COALESCE(name, 'Jalan tanpa nama') AS name,
+              ST_AsGeoJSON(geom)::json AS geometry
+       FROM public.jaringan_ways
+       WHERE is_blocked = TRUE
+       ORDER BY id`
+    );
+
+    res.json({
+      type: "FeatureCollection",
+      total: result.rows.length,
+      features: result.rows.map((row) => ({
+        type: "Feature",
+        geometry: row.geometry,
+        properties: { id: row.id, name: row.name },
+      })),
+    });
+  } catch (err) {
+    console.error("ERROR get blocked:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
