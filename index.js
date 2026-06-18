@@ -121,10 +121,37 @@ async function cariNodeTerdekat(pool, lon, lat, kecualiId = null) {
 }
 
 // ============================================================
+// ENDPOINT: Ambil semua shelter
+// ============================================================
+app.get("/api/shelter", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT gid, nama_lokas,
+        ST_Y(geom) AS lat, ST_X(geom) AS lon
+       FROM public.titik_evakuasi_sektor_ab
+       ORDER BY gid`
+    );
+    res.json({
+      success: true,
+      total: result.rows.length,
+      data: result.rows.map(r => ({
+        gid: r.gid,
+        nama: r.nama_lokas,
+        lat: parseFloat(r.lat),
+        lon: parseFloat(r.lon)
+      }))
+    });
+  } catch (err) {
+    console.error("ERROR get shelter:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
 // ENDPOINT UTAMA
 // ============================================================
 app.get("/api/rute-otomatis", async (req, res) => {
-  const { lat, lon } = req.query;
+  const { lat, lon, shelter_id } = req.query;
   if (!lat || !lon)
     return res
       .status(400)
@@ -135,19 +162,38 @@ app.get("/api/rute-otomatis", async (req, res) => {
   console.log(`\nRequest: lat=${userLat}, lon=${userLon}`);
 
   try {
-    // STEP 1: Cari shelter terdekat (garis lurus)
-    const shelterRes = await pool.query(
-      `
-      SELECT gid, nama_lokas,
-        ST_Y(geom) AS s_lat, ST_X(geom) AS s_lon,
-        ROUND(ST_Distance(geom::geography,
-          ST_SetSRID(ST_MakePoint($1,$2),4326)::geography)::numeric, 2) AS jarak_meter
-      FROM public.titik_evakuasi_sektor_ab
-      ORDER BY geom <-> ST_SetSRID(ST_MakePoint($1,$2), 4326)
-      LIMIT 1
-      `,
-      [userLon, userLat]
-    );
+    // STEP 1: Cari shelter (berdasarkan ID jika dipilih, atau terdekat otomatis)
+    let shelterRes;
+
+    if (shelter_id) {
+      // Mode manual: user memilih shelter tertentu
+      shelterRes = await pool.query(
+        `
+        SELECT gid, nama_lokas,
+          ST_Y(geom) AS s_lat, ST_X(geom) AS s_lon,
+          ROUND(ST_Distance(geom::geography,
+            ST_SetSRID(ST_MakePoint($1,$2),4326)::geography)::numeric, 2) AS jarak_meter
+        FROM public.titik_evakuasi_sektor_ab
+        WHERE gid = $3
+        LIMIT 1
+        `,
+        [userLon, userLat, parseInt(shelter_id)]
+      );
+    } else {
+      // Mode otomatis: cari shelter terdekat (garis lurus)
+      shelterRes = await pool.query(
+        `
+        SELECT gid, nama_lokas,
+          ST_Y(geom) AS s_lat, ST_X(geom) AS s_lon,
+          ROUND(ST_Distance(geom::geography,
+            ST_SetSRID(ST_MakePoint($1,$2),4326)::geography)::numeric, 2) AS jarak_meter
+        FROM public.titik_evakuasi_sektor_ab
+        ORDER BY geom <-> ST_SetSRID(ST_MakePoint($1,$2), 4326)
+        LIMIT 1
+        `,
+        [userLon, userLat]
+      );
+    }
 
     if (shelterRes.rows.length === 0)
       return res.status(404).json({ success: false, message: "Tidak ada shelter." });
@@ -158,7 +204,7 @@ app.get("/api/rute-otomatis", async (req, res) => {
       lon: parseFloat(shelterRes.rows[0].s_lon),
       jarak_lurus_meter: parseFloat(shelterRes.rows[0].jarak_meter),
     };
-    console.log(`Shelter: ${shelter.nama} (${shelter.jarak_lurus_meter}m lurus)`);
+    console.log(`Shelter: ${shelter.nama} (${shelter.jarak_lurus_meter}m lurus)${shelter_id ? ' [DIPILIH MANUAL]' : ' [TERDEKAT]'}`);
 
     // STEP 2: Source node — dari komponen utama, terdekat dari warga
     const srcNode = await cariNodeTerdekat(pool, userLon, userLat, null);

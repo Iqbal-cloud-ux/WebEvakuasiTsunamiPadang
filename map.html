@@ -309,6 +309,75 @@
     }
     .action-btn:disabled { opacity: .3; cursor: not-allowed; }
 
+    /* ── Shelter toggle ── */
+    .shelter-toggle {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 10px;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg-card);
+      font-family: inherit;
+      width: 100%;
+    }
+    .shelter-toggle:hover { border-color: var(--cyan); background: var(--cyan-dim); }
+    .shelter-toggle .shelter-icon {
+      width: 16px; height: 16px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .shelter-toggle .shelter-icon svg {
+      width: 12px; height: 12px;
+      stroke: var(--text-muted); stroke-width: 2; fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+      transition: stroke 0.2s;
+    }
+    .shelter-toggle .shelter-label {
+      font-size: 9.5px; font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      transition: color 0.2s;
+    }
+    .shelter-toggle.active {
+      border-color: rgba(52,209,160,.4);
+      border-style: solid;
+      background: var(--cyan-dim);
+    }
+    .shelter-toggle.active .shelter-icon svg { stroke: var(--cyan); }
+    .shelter-toggle.active .shelter-label { color: var(--cyan); }
+
+    .shelter-count {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 2px 0;
+    }
+    .shelter-count strong { color: var(--cyan); font-weight: 700; }
+
+    /* ── Popup shelter btn ── */
+    .popup-rute-btn {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 4px 12px;
+      background: var(--cyan);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .popup-rute-btn:hover {
+      filter: brightness(0.9);
+    }
+    body:not(.light-theme) .popup-rute-btn {
+      color: #080b10;
+    }
+
     /* ── BPBD toggle ── */
     .bpbd-toggle {
       display: flex; align-items: center; gap: 8px;
@@ -739,6 +808,17 @@
 
       <button class="action-btn" id="btn-reload" onclick="onReload()">Lacak Ulang</button>
 
+      <!-- Shelter Section -->
+      <div style="border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px;"></div>
+
+      <button class="shelter-toggle" id="shelter-toggle" onclick="toggleShelterLayer()">
+        <span class="shelter-icon">
+          <svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M9 22V12h6v10" /><path d="M8 6h.01M16 6h.01M12 6h.01" /></svg>
+        </span>
+        <span class="shelter-label">Tampilkan Semua Shelter</span>
+      </button>
+      <div class="shelter-count" id="shelter-count"></div>
+
       <!-- BPBD Section -->
       <div style="border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px;"></div>
 
@@ -825,6 +905,9 @@
     let currentTheme = localStorage.getItem('theme') || 'dark';
     let tileLayer = null;
     let blockedLayer = null;  // Layer group untuk jalan diblokir
+    let allShelterLayer = null; // Layer group untuk semua marker shelter
+    let showAllShelters = false;
+    let allShelterData = [];    // Array data shelter dari backend
 
     // ── MAP ───────────────────────────────────────────────
     const map = L.map('map', { zoomControl: false }).setView([-0.9471, 100.4172], 13);
@@ -879,6 +962,11 @@
     const iconShelter = L.divIcon({
       html: `<div style="width:16px;height:16px;background:#ff4d4d;border:2px solid #fff;border-radius:3px;transform:rotate(45deg);box-shadow:0 0 0 3px rgba(255,77,77,.25),0 0 14px rgba(255,77,77,.7)"></div>`,
       className: '', iconSize: [16,16], iconAnchor: [8,8]
+    });
+    // Icon untuk semua shelter (lebih kecil, sedikit transparan)
+    const iconShelterAll = L.divIcon({
+      html: `<div style="width:12px;height:12px;background:rgba(255,77,77,.7);border:2px solid rgba(255,255,255,.8);border-radius:2px;transform:rotate(45deg);box-shadow:0 0 0 2px rgba(255,77,77,.15),0 0 8px rgba(255,77,77,.4)"></div>`,
+      className: '', iconSize: [12,12], iconAnchor: [6,6]
     });
 
     // ── HELPERS UI ────────────────────────────────────────
@@ -992,12 +1080,14 @@
     }
 
     // ── FETCH RUTE ────────────────────────────────────────
-    async function fetchRute(lat, lon, akurasiM) {
+    async function fetchRute(lat, lon, akurasiM, shelterId = null) {
       document.getElementById('btn-reload').disabled = true;
-      setStatus('loading', 'Menghitung rute tercepat...');
+      setStatus('loading', shelterId ? 'Menghitung rute ke shelter pilihan...' : 'Menghitung rute tercepat...');
 
       try {
-        const r = await fetch(`${BACKEND}/api/rute-otomatis?lat=${lat}&lon=${lon}`, {
+        let url = `${BACKEND}/api/rute-otomatis?lat=${lat}&lon=${lon}`;
+        if (shelterId) url += `&shelter_id=${shelterId}`;
+        const r = await fetch(url, {
   headers: { 'ngrok-skip-browser-warning': 'true' }
 });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1429,10 +1519,107 @@
       blockNotifTimer = setTimeout(() => { el.style.display = 'none'; }, 3000);
     }
 
+    // ============================================================
+    // SHELTER — TAMPILKAN SEMUA & PILIH MANUAL
+    // ============================================================
+
+    function toggleShelterLayer() {
+      showAllShelters = !showAllShelters;
+      const btn = document.getElementById('shelter-toggle');
+      const countEl = document.getElementById('shelter-count');
+
+      if (showAllShelters) {
+        btn.classList.add('active');
+        btn.querySelector('.shelter-label').textContent = 'Sembunyikan Shelter';
+        gambarSemuaShelter();
+      } else {
+        btn.classList.remove('active');
+        btn.querySelector('.shelter-label').textContent = 'Tampilkan Semua Shelter';
+        if (allShelterLayer) { map.removeLayer(allShelterLayer); allShelterLayer = null; }
+        countEl.textContent = '';
+      }
+    }
+
+    async function muatSemuaShelter() {
+      try {
+        const r = await fetch(`${BACKEND}/api/shelter`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
+        const data = await r.json();
+        if (data.success) {
+          allShelterData = data.data;
+          console.log(`📦 ${allShelterData.length} shelter dimuat`);
+        }
+      } catch (err) {
+        console.error('❌ Gagal memuat data shelter:', err);
+      }
+    }
+
+    function gambarSemuaShelter() {
+      if (allShelterLayer) map.removeLayer(allShelterLayer);
+      allShelterLayer = L.layerGroup();
+
+      const countEl = document.getElementById('shelter-count');
+
+      if (allShelterData.length === 0) {
+        countEl.textContent = 'Data shelter belum tersedia';
+        return;
+      }
+
+      countEl.innerHTML = `<strong>${allShelterData.length}</strong> shelter tersedia`;
+
+      allShelterData.forEach(s => {
+        const marker = L.marker([s.lat, s.lon], { icon: iconShelterAll })
+          .bindPopup(`
+            <div class="popup-title">🏢 ${s.nama || 'Shelter Evakuasi'}</div>
+            <div class="popup-sub">
+              ${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}
+            </div>
+            <button class="popup-rute-btn" onclick="ruteKeShelter(${s.gid}, '${(s.nama || '').replace(/'/g, "\\'")}')">Rute ke Sini →</button>
+          `);
+        marker.addTo(allShelterLayer);
+      });
+
+      allShelterLayer.addTo(map);
+    }
+
+    function ruteKeShelter(gid, nama) {
+      // Tutup popup yang sedang terbuka
+      map.closePopup();
+
+      // Cek apakah posisi user sudah ada
+      if (!lastUserCoords && !userMarker) {
+        setStatus('error', 'Tentukan lokasi Anda terlebih dahulu (GPS atau klik manual)');
+        return;
+      }
+
+      // Ambil koordinat user dari state terakhir
+      let userLat, userLon, userAcc;
+      if (lastUserCoords) {
+        userLat = lastUserCoords.lat;
+        userLon = lastUserCoords.lon;
+        userAcc = lastUserCoords.akurasi;
+      } else if (userMarker) {
+        const ll = userMarker.getLatLng();
+        userLat = ll.lat;
+        userLon = ll.lng;
+        userAcc = null;
+      }
+
+      // Hapus rute & shelter marker lama (tapi bukan user marker!)
+      if (shelterMarker) { map.removeLayer(shelterMarker); shelterMarker = null; }
+      if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+      clearUI();
+
+      console.log(`🏢 Rute manual ke shelter: ${nama} (GID: ${gid})`);
+      fetchRute(userLat, userLon, userAcc, gid);
+    }
+
     // ── START ─────────────────────────────────────────────
     window.onload = () => {
       jalankanGPS();
       muatJalanDiblokir(); // Muat jalan diblokir saat halaman dibuka
+      muatSemuaShelter();   // Muat data semua shelter (tanpa menampilkan marker dulu)
     };
   </script>
 </body>
