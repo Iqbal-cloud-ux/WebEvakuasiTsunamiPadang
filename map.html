@@ -309,6 +309,45 @@
     }
     .action-btn:disabled { opacity: .3; cursor: not-allowed; }
 
+    /* ── Basemap toggle ── */
+    .basemap-toggle {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 10px;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg-card);
+      font-family: inherit;
+      width: 100%;
+    }
+    .basemap-toggle:hover { border-color: #648cff; background: rgba(100,140,255,.06); }
+    .basemap-toggle .basemap-icon {
+      width: 16px; height: 16px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .basemap-toggle .basemap-icon svg {
+      width: 12px; height: 12px;
+      stroke: var(--text-muted); stroke-width: 2; fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+      transition: stroke 0.2s;
+    }
+    .basemap-toggle .basemap-label {
+      font-size: 9.5px; font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      transition: color 0.2s;
+    }
+    .basemap-toggle.active {
+      border-color: rgba(100,140,255,.4);
+      border-style: solid;
+      background: rgba(100,140,255,.08);
+    }
+    .basemap-toggle.active .basemap-icon svg { stroke: #648cff; }
+    .basemap-toggle.active .basemap-label { color: #648cff; }
+
     /* ── Shelter toggle ── */
     .shelter-toggle {
       display: flex; align-items: center; gap: 8px;
@@ -819,6 +858,13 @@
       </button>
       <div class="shelter-count" id="shelter-count"></div>
 
+      <button class="basemap-toggle" id="basemap-toggle" onclick="toggleBasemap()">
+        <span class="basemap-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><ellipse cx="12" cy="12" rx="4" ry="10"/></svg>
+        </span>
+        <span class="basemap-label">Peta Satelit</span>
+      </button>
+
       <!-- BPBD Section -->
       <div style="border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px;"></div>
 
@@ -908,6 +954,7 @@
     let allShelterLayer = null; // Layer group untuk semua marker shelter
     let showAllShelters = false;
     let allShelterData = [];    // Array data shelter dari backend
+    let basemapMode = 'peta';   // 'peta' atau 'satelit'
 
     // ── MAP ───────────────────────────────────────────────
     const map = L.map('map', { zoomControl: false }).setView([-0.9471, 100.4172], 13);
@@ -919,24 +966,31 @@
     // Fungsi untuk mengubah tema
     function applyTheme(theme) {
       currentTheme = theme;
-      if (tileLayer) map.removeLayer(tileLayer);
       
       const themeToggleBtn = document.getElementById('theme-toggle');
 
       if (theme === 'light') {
         document.body.classList.add('light-theme');
         if (themeToggleBtn) themeToggleBtn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
-        tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
-        }).addTo(map);
         localStorage.setItem('theme', 'light');
       } else {
         document.body.classList.remove('light-theme');
         if (themeToggleBtn) themeToggleBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>';
-        tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
-        }).addTo(map);
         localStorage.setItem('theme', 'dark');
+      }
+
+      // Jangan ganti tile jika sedang mode satelit
+      if (basemapMode !== 'satelit') {
+        if (tileLayer) map.removeLayer(tileLayer);
+        if (theme === 'light') {
+          tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+          }).addTo(map);
+        } else {
+          tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+          }).addTo(map);
+        }
       }
 
       // Refresh gambar polyline jika rute sedang aktif agar kontras warna terupdate
@@ -948,6 +1002,43 @@
     function toggleTheme() {
       const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
       applyTheme(nextTheme);
+    }
+
+    // ── BASEMAP SATELIT ──────────────────────────────────
+    function toggleBasemap() {
+      const btn = document.getElementById('basemap-toggle');
+
+      if (basemapMode === 'peta') {
+        // Ganti ke satelit
+        basemapMode = 'satelit';
+        if (tileLayer) map.removeLayer(tileLayer);
+        tileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: '&copy; Esri &mdash; Sources: Esri, Maxar, Earthstar Geographics',
+          maxZoom: 19
+        }).addTo(map);
+        btn.classList.add('active');
+        btn.querySelector('.basemap-label').textContent = 'Peta Jalan';
+      } else {
+        // Kembali ke peta jalan (sesuai tema aktif)
+        basemapMode = 'peta';
+        if (tileLayer) map.removeLayer(tileLayer);
+        if (currentTheme === 'light') {
+          tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+          }).addTo(map);
+        } else {
+          tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+          }).addTo(map);
+        }
+        btn.classList.remove('active');
+        btn.querySelector('.basemap-label').textContent = 'Peta Satelit';
+      }
+
+      // Refresh rute agar kontras warna sesuai
+      if (routeLayer && lastRouteData) {
+        redrawRoute(lastRouteData);
+      }
     }
 
     // Variabel penyimpan data rute terakhir untuk keperluan refresh warna rute saat ganti tema
